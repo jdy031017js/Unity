@@ -1,0 +1,85 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class SoccerBallController : MonoBehaviour
+{
+    public GameObject fireParticlePrefab;
+    public GameObject waterParticlePrefab;
+    public GameObject lightningParticlePrefab;
+
+    private ParticleSystem fireParticle;
+    private ParticleSystem waterParticle;
+    private ParticleSystem lightningParticle;
+
+    private List<ParticleSystem> particleEffects;
+    private bool isParticlePlayed = false; // 파티클이 이미 재생되었는지 여부
+
+    void Start()
+    {
+        // 파티클 프리팹이 null이 아닌지 확인 후 인스턴스화
+        if (fireParticlePrefab && waterParticlePrefab && lightningParticlePrefab)
+        {
+            fireParticle = Instantiate(fireParticlePrefab).GetComponent<ParticleSystem>();
+            waterParticle = Instantiate(waterParticlePrefab).GetComponent<ParticleSystem>();
+            lightningParticle = Instantiate(lightningParticlePrefab).GetComponent<ParticleSystem>();
+
+            // 파티클 시스템을 리스트에 추가
+            particleEffects = new List<ParticleSystem> { fireParticle, waterParticle, lightningParticle };
+            
+            // 파티클 초기화
+            foreach (ParticleSystem particle in particleEffects)
+            {
+                particle.Stop();
+                particle.Clear();
+            }
+        }
+        else
+        {
+            Debug.LogError("One or more particle prefabs are missing!");
+        }
+    }
+
+    public void Shoot(Vector3 dir)
+    {
+        GetComponent<Rigidbody>().AddForce(dir);
+    }
+
+    void OnCollisionEnter(Collision other)
+    {
+        if (isParticlePlayed) return; // 이미 파티클이 재생된 경우 함수 종료
+
+        if (particleEffects == null || particleEffects.Count == 0)
+        {
+            Debug.LogError("Particle systems are not initialized.");
+            return;
+        }
+
+        if (other.gameObject.CompareTag("Goal"))
+        {
+            Debug.Log("Goal collision detected!"); 
+
+            foreach (ParticleSystem particle in particleEffects)
+            {
+                particle.transform.position = transform.position;
+            }
+
+            int randomIndex = Random.Range(0, particleEffects.Count);
+            particleEffects[randomIndex].Play();
+
+            Debug.Log("Playing particle: " + randomIndex);
+            Debug.Log("Particle is playing: " + particleEffects[randomIndex].isPlaying);
+
+            if (!particleEffects[randomIndex].isPlaying)
+            {
+                Debug.Log("Emit particles directly.");
+                particleEffects[randomIndex].Emit(10);
+            }
+
+            isParticlePlayed = true; // 파티클이 한번 재생된 후에는 다시 재생되지 않도록 설정
+
+            // 2초 후 축구공 오브젝트 제거
+            Destroy(gameObject, 2f);
+        }
+    }
+}
